@@ -43,6 +43,9 @@ int main(int argc, char **argv)
 			static struct ifreq ifr;
 			static struct can_frame frame;
 
+
+			
+
 			printf("(Fils) CAN Attente de la trame\r\n");
 
 			if ((fdSocketCAN = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
@@ -91,6 +94,10 @@ int main(int argc, char **argv)
 
 			printf("\r\n");
 
+			//****************************************************************************************************************/
+			// Écrire ici le code pour envoyer frame.data[] sur le port série (NE PEUT PAS ETRE BLOQUANT!!!! il bloque deja quand il lit le can)
+			//****************************************************************************************************************/
+
 			
 		}
 
@@ -105,16 +112,13 @@ int main(int argc, char **argv)
 			static struct sockaddr_can addr;
 			static struct ifreq ifr;
 			static struct can_frame frame;
-			static int iDataCanSent = 0;
+			static unsigned char cDataCanSent[8] = {0x24, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
 
-			if(iDataCanSent > 255)
-			{
-				iDataCanSent = 0;
-			}
-			else
-			{
-				iDataCanSent++;
-			}
+			//****************************************************************************************************************/
+			// Écrire le code pour lire le port série et mettre les valeurs dans cDataCanSent[] (NE PEUT PAS ETRE BLOQUANT (car il doit envoyer tout les 10ms et il sleep a la fin de la fonction))
+			//****************************************************************************************************************/
+
+
 
 
 			/*
@@ -161,19 +165,25 @@ int main(int argc, char **argv)
 			La structure can_frame de base est définie dans include/linux/can.h  
 			*/
 			frame.can_id = 0x002;  	// identifiant CAN, exemple: 247 = 0x0F7
-			frame.can_dlc = 7;		// nombre d'octets de données
+			frame.can_dlc = 8;		// nombre d'octets de données
 			//sprintf(frame.data, "ABCDEFG");  // données 
-			sprintf(frame.data, (char)iDataCanSent);  // données 
+			
+			for(int i = 0; i < 8; i++)
+			{
+				 frame.data[i] = cDataCanSent[i];
+
+			}
+			
 
 			if (write(fdSocketCAN, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
 				perror("Write");
 				printf("(Pere) CAN Write Error\r\n");
 			}
 
+
 			usleep(10000); //sleep 10000u sec (10ms)
 
 		}
 	}
-
 
 }
