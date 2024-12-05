@@ -1,4 +1,3 @@
-
 #define _DEFAULT_SOURCE
 
 #include <stdio.h>
@@ -52,10 +51,11 @@ int main(int argc, char **argv)
 				perror("Socket");
 				printf("(Fils) CAN Socket Error\r\n");
 			}
+			
 
 			if(argc == 2)
 				strcpy(ifr.ifr_name, argv[1]);
-			else strcpy(ifr.ifr_name, "vcan0" );
+			else strcpy(ifr.ifr_name, "can0" );
 
 			ioctl(fdSocketCAN, SIOCGIFINDEX, &ifr);
 			
@@ -67,26 +67,26 @@ int main(int argc, char **argv)
 				perror("Bind");
 				printf("(Fils) CAN Bind Error\r\n");
 			}
+			
 
 			/// A filter matches, when <received_can_id> & mask == can_id & mask
 			struct can_filter rfilter[3]; // filtres pour 3 ID
 
-			rfilter[0].can_id   = 0x001; 
-			rfilter[0].can_mask = 0xFFF;
-			rfilter[1].can_id   = 0x017;
+			rfilter[0].can_id   = 0x001;//0x001
+			rfilter[0].can_mask = 0x000;
+			rfilter[1].can_id   = 0x017;//0x017
 			rfilter[1].can_mask = 0xFFF;
 			rfilter[2].can_id   = 0x031;
 			rfilter[2].can_mask = 0xFFF;
 
 			setsockopt(fdSocketCAN, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
 
-			nbytes = read(fdSocketCAN, &frame, sizeof(struct can_frame));
-
+			nbytes = read(fdSocketCAN, &frame, sizeof(struct can_frame));  //bloque ici
 			if (nbytes < 0) {
 				perror("Read");
 				printf("(Fils) CAN Close Error\r\n");
 			}
-
+			
 			printf("(Fils) 0x%03X [%d] ",frame.can_id, frame.can_dlc);
 
 			for (i = 0; i < frame.can_dlc; i++)
@@ -105,21 +105,20 @@ int main(int argc, char **argv)
 	}
 	else
 	{ // Code exécuté par le processus parent
+	
 
-		while(1)
-		{
-			static int fdSocketCAN; 
-			static struct sockaddr_can addr;
-			static struct ifreq ifr;
-			static struct can_frame frame;
-			static unsigned char cDataCanSent[8] = {0x24, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
+		static int fdSocketCAN; 
+		static struct sockaddr_can addr;
+		static struct ifreq ifr;
+		static struct can_frame frame;
+		static unsigned char cDataCanSent[8] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38};
+		static unsigned int prmFois = 0;
 
-			//****************************************************************************************************************/
-			// Écrire le code pour lire le port série et mettre les valeurs dans cDataCanSent[] (NE PEUT PAS ETRE BLOQUANT (car il doit envoyer tout les 10ms et il sleep a la fin de la fonction))
-			//****************************************************************************************************************/
+		//****************************************************************************************************************/
+		// Écrire le code pour lire le port série et mettre les valeurs dans cDataCanSent[] (NE PEUT PAS ETRE BLOQUANT (car il doit envoyer tout les 10ms et il sleep a la fin de la fonction))
+		//****************************************************************************************************************/
 
-
-
+		
 
 			/*
 			La première étape est de créer un socket. 
@@ -141,7 +140,7 @@ int main(int argc, char **argv)
 			*/
 			if(argc == 2) // si un argument est passé au programme, on l'assigne au nom da l'interface CAN à utiliser
 				strcpy(ifr.ifr_name, argv[1]);
-			else strcpy(ifr.ifr_name, "vcan0" ); // par défaut l'interface can0
+			else strcpy(ifr.ifr_name, "can0" ); // par défaut l'interface can0
 
 			ioctl(fdSocketCAN, SIOCGIFINDEX, &ifr);
 			/*	Alternativement, zéro comme index d'interface, permet de récupérer les paquets de toutes les interfaces CAN.
@@ -160,14 +159,15 @@ int main(int argc, char **argv)
 				printf("(Pere) CAN Bind Error\r\n");
 			}
 
-			/*
-			Envoyer une trame CAN, initialiser une structure can_frame et la remplir avec des données. 
-			La structure can_frame de base est définie dans include/linux/can.h  
-			*/
-			frame.can_id = 0x002;  	// identifiant CAN, exemple: 247 = 0x0F7
-			frame.can_dlc = 8;		// nombre d'octets de données
-			//sprintf(frame.data, "ABCDEFG");  // données 
-			
+		/*
+		Envoyer une trame CAN, initialiser une structure can_frame et la remplir avec des données. 
+		La structure can_frame de base est définie dans include/linux/can.h  
+		*/
+		frame.can_id = 0x034;  	//0x002
+		frame.can_dlc = 8;		// nombre d'octets de données
+		//sprintf(frame.data, "ABCDEFG");  // données 
+		while(1)
+		{
 			for(int i = 0; i < 8; i++)
 			{
 				 frame.data[i] = cDataCanSent[i];
@@ -179,9 +179,12 @@ int main(int argc, char **argv)
 				perror("Write");
 				printf("(Pere) CAN Write Error\r\n");
 			}
+			//for (int i = 0; i < frame.can_dlc; i++)
+				//printf("%02X ",frame.data[i]);
+			
+			usleep(100000); //sleep 100000u sec (100ms)
 
-
-			usleep(10000); //sleep 10000u sec (10ms)
+					
 
 		}
 	}
